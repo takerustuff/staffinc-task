@@ -10,9 +10,87 @@ const SCORES = [
   { field: "cultural_fit_score", label: "Cultural Fit Score", hint: "Alignment with client culture" },
 ];
 
+const CLIENT_TYPES = [
+  {
+    value: "corporate",
+    label: "Corporate",
+    desc: "Prioritises communication & executive presence",
+    icon: "🏢",
+  },
+  {
+    value: "startup",
+    label: "Startup",
+    desc: "Prioritises adaptability & scrappiness",
+    icon: "🚀",
+  },
+  {
+    value: "consulting",
+    label: "Consulting",
+    desc: "Prioritises structured thinking & polish",
+    icon: "📊",
+  },
+];
+
+const MODES = [
+  {
+    value: "pre",
+    label: "Pre-Interview",
+    desc: "Predict risk before the client interview",
+    icon: "🔮",
+  },
+  {
+    value: "post",
+    label: "Post-Interview",
+    desc: "Explain why the candidate failed",
+    icon: "🔍",
+  },
+];
+
 export default function CandidateForm({ form, onChange, onSubmit, loading, error }) {
   return (
     <form className={styles.form} onSubmit={onSubmit} noValidate>
+
+      {/* Mode toggle */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Interview Mode</h2>
+        <p className={styles.sectionHint}>Are you analysing before or after the client interview?</p>
+        <div className={styles.toggleGroup}>
+          {MODES.map((m) => (
+            <button
+              key={m.value}
+              type="button"
+              className={`${styles.toggleBtn} ${form.interview_mode === m.value ? styles.toggleActive : ""}`}
+              onClick={() => onChange("interview_mode", m.value)}
+            >
+              <span className={styles.toggleIcon}>{m.icon}</span>
+              <span className={styles.toggleLabel}>{m.label}</span>
+              <span className={styles.toggleDesc}>{m.desc}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Client type */}
+      <section className={styles.section}>
+        <h2 className={styles.sectionTitle}>Client Type</h2>
+        <p className={styles.sectionHint}>Different clients prioritise different traits — this adjusts the scoring weights.</p>
+        <div className={styles.toggleGroup}>
+          {CLIENT_TYPES.map((c) => (
+            <button
+              key={c.value}
+              type="button"
+              className={`${styles.toggleBtn} ${form.client_type === c.value ? styles.toggleActive : ""}`}
+              onClick={() => onChange("client_type", c.value)}
+            >
+              <span className={styles.toggleIcon}>{c.icon}</span>
+              <span className={styles.toggleLabel}>{c.label}</span>
+              <span className={styles.toggleDesc}>{c.desc}</span>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Candidate details */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Candidate Details</h2>
         <div className={styles.row}>
@@ -65,6 +143,7 @@ export default function CandidateForm({ form, onChange, onSubmit, loading, error
         </div>
       </section>
 
+      {/* Scores */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Scores (0 – 10)</h2>
         <div className={styles.sliders}>
@@ -80,6 +159,7 @@ export default function CandidateForm({ form, onChange, onSubmit, loading, error
         </div>
       </section>
 
+      {/* Qualitative feedback */}
       <section className={styles.section}>
         <h2 className={styles.sectionTitle}>Qualitative Feedback</h2>
         <div className={styles.field}>
@@ -93,13 +173,22 @@ export default function CandidateForm({ form, onChange, onSubmit, loading, error
           />
         </div>
         <div className={styles.field}>
-          <label htmlFor="client_feedback">Client Feedback</label>
+          <label htmlFor="client_feedback">
+            Client Feedback
+            {form.interview_mode === "pre" && (
+              <span className={styles.optionalTag}> — optional in Pre-Interview mode</span>
+            )}
+          </label>
           <textarea
             id="client_feedback"
             rows={4}
             value={form.client_feedback}
             onChange={(e) => onChange("client_feedback", e.target.value)}
-            placeholder="What the client said after the interview (if available)..."
+            placeholder={
+              form.interview_mode === "post"
+                ? "What the client said after the interview..."
+                : "Leave blank if interview hasn't happened yet..."
+            }
           />
         </div>
       </section>
@@ -107,7 +196,7 @@ export default function CandidateForm({ form, onChange, onSubmit, loading, error
       {error && <p className={styles.error} role="alert">⚠ {error}</p>}
 
       <button type="submit" className={styles.submit} disabled={loading || !form.name || !form.role}>
-        {loading ? "Analysing…" : "Analyse Candidate →"}
+        {loading ? "Analysing…" : `${form.interview_mode === "post" ? "Analyse Failure →" : "Predict Risk →"}`}
       </button>
     </form>
   );

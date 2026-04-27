@@ -19,7 +19,7 @@ export default function InsightsPanel({ result, candidate, onReset }) {
         <div className={styles.riskLeft}>
           <span className={styles.riskEmoji}>{cfg.emoji}</span>
           <div>
-            <p className={styles.riskLabel}>Risk Level</p>
+            <p className={styles.riskLabel}>{result.mode_label}</p>
             <p className={styles.riskLevel} style={{ color: cfg.color }}>{result.risk_level}</p>
           </div>
         </div>

@@ -16,6 +16,8 @@ const INITIAL_FORM = {
   client_feedback: "",
   years_experience: 3,
   previous_client_rejections: 0,
+  client_type: "corporate",
+  interview_mode: "pre",
 };
 
 export default function App() {

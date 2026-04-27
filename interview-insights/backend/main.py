@@ -25,6 +25,8 @@ class AnalyzeRequest(BaseModel):
     client_feedback: str
     years_experience: int = Field(..., ge=0)
     previous_client_rejections: int = Field(0, ge=0)
+    client_type: str = Field("corporate", pattern="^(corporate|startup|consulting)$")
+    interview_mode: str = Field("pre", pattern="^(pre|post)$")
 
 
 @app.get("/health")
@@ -43,4 +45,5 @@ def analyze_candidate(req: AnalyzeRequest):
         "recommendations": result.recommendations,
         "summary": result.summary,
         "score_breakdown": result.score_breakdown,
+        "mode_label": result.mode_label,
     }

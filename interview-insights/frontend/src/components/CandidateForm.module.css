@@ -67,6 +67,65 @@
   gap: 1rem;
 }
 
+.sectionHint {
+  font-size: 0.82rem;
+  color: #718096;
+  margin-bottom: 1rem;
+  margin-top: -0.75rem;
+}
+
+.toggleGroup {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.toggleBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.85rem 0.75rem;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f7fafc;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  text-align: center;
+}
+
+.toggleBtn:hover {
+  border-color: #667eea;
+  background: #ebf4ff;
+}
+
+.toggleActive {
+  border-color: #667eea;
+  background: linear-gradient(135deg, #ebf4ff, #f0e6ff);
+}
+
+.toggleIcon {
+  font-size: 1.5rem;
+}
+
+.toggleLabel {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.toggleDesc {
+  font-size: 0.72rem;
+  color: #718096;
+  line-height: 1.3;
+}
+
+.optionalTag {
+  font-weight: 400;
+  color: #a0aec0;
+  font-size: 0.8rem;
+}
+
 .error {
   color: #c53030;
   background: #fff5f5;
