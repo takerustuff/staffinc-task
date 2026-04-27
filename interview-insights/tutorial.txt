@@ -4,14 +4,15 @@
 
 WHAT IS THIS PROGRAM?
 ---------------------
-Interview Insights is a tool for recruiters. You enter information about a 
+Interview Insights is a tool for recruiters. You enter information about a
 candidate who is going for a client interview, and the program tells you:
 
   - How risky it is to send this candidate to the client
-  - What problems the candidate has
+  - What specific problems the candidate has
   - What you should do to improve their chances
 
-Think of it as a second opinion before you send someone to a client interview.
+Think of it as a second opinion before you send someone to a client interview,
+or a structured way to understand why a candidate failed after the fact.
 
 
 ================================================================================
@@ -25,310 +26,364 @@ Open your browser and go to the app URL.
 If running locally:   http://localhost:5173
 If deployed online:   your Vercel URL (e.g. https://staffinc-task.vercel.app)
 
-You will see a form with the title "Interview Insights".
+You will see the Interview Insights form.
 
 
 --------------------------------------------------------------------------------
 
-STEP 2 - FILL IN CANDIDATE DETAILS
-------------------------------------
-At the top of the form you will see 4 fields:
+STEP 2 - SELECT INTERVIEW MODE
+--------------------------------
+At the top of the form, choose which stage you are analysing:
 
+  [ Pre-Interview ]
+  Use this BEFORE the client interview has happened.
+  The program will predict the risk of sending this candidate.
+  Client Feedback field becomes optional.
+  The submit button will say "Predict Risk".
+
+  [ Post-Interview ]
+  Use this AFTER the client interview has happened.
+  The program will explain why the candidate failed.
+  Both recruiter notes and client feedback are scanned for issues.
+  The submit button will say "Analyse Failure".
+
+  Which one should I use?
+  - Candidate hasn't interviewed yet? Use Pre-Interview.
+  - Candidate already interviewed and failed? Use Post-Interview.
+
+
+--------------------------------------------------------------------------------
+
+STEP 3 - SELECT CLIENT TYPE
+-----------------------------
+Choose the type of company the candidate is interviewing with.
+This changes how the scores are weighted in the analysis.
+
+  [ Corporate ]
+  Large, established companies (banks, multinationals, large enterprises).
+  Prioritises: Communication and executive presence.
+  Communication and confidence are weighted more heavily.
+
+  [ Startup ]
+  Early-stage or fast-growing companies.
+  Prioritises: Adaptability and initiative.
+  Confidence and cultural fit are weighted more heavily.
+
+  [ Consulting ]
+  Consulting or professional services firms.
+  Prioritises: Structured thinking and polish.
+  Technical and communication are both weighted equally high.
+
+  Why does this matter?
+  A candidate who is great for a startup might not be right for a corporate
+  client. This setting ensures the analysis reflects what the actual client
+  values most.
+
+
+--------------------------------------------------------------------------------
+
+STEP 4 - FILL IN CANDIDATE DETAILS
+------------------------------------
   [ Candidate Name ]
-  Type the full name of the candidate.
-  Example: Alex Johnson
+  Full name of the candidate.
+  Example: Sarah Tan
 
   [ Role Applied For ]
-  Type the job title they are interviewing for.
-  Example: Senior Software Engineer
+  The job title they are interviewing for.
+  Example: Project Manager
 
   [ Years of Experience ]
   How many years have they worked in this field?
-  Example: 4
-  (Use 0 if they are a fresh graduate)
+  Use 0 for fresh graduates.
 
   [ Prior Client Rejections ]
   How many times has this candidate been rejected by a client before?
-  Example: 0 (if this is their first client interview)
-  Example: 2 (if they have been rejected twice before)
+  Each rejection adds a penalty to the final risk score (-5 per rejection,
+  maximum -20 points).
 
 
 --------------------------------------------------------------------------------
 
-STEP 3 - SET THE SCORES
+STEP 5 - SET THE SCORES
 ------------------------
-You will see 5 sliders. Each slider goes from 0 to 10.
-Drag the slider left for a lower score, right for a higher score.
+There are 5 sliders, each from 0 to 10.
+Drag right for a higher score, left for a lower score.
 
-The slider color changes automatically:
-  GREEN  = Strong (8 and above)
-  YELLOW = Moderate (6 to 7.9)
-  RED    = Weak (below 6)
-
-Here is what each score means:
+The score value changes color automatically:
+  Green  = Strong (8.0 and above)
+  Yellow = Moderate (6.0 to 7.9)
+  Red    = Weak (below 6.0)
 
   [ Internal Score ]
   Your agency's overall rating of this candidate.
   How good do YOU think they are overall?
-  10 = Excellent candidate
-  5  = Average candidate
-  1  = Weak candidate
 
   [ Technical Score ]
   How strong are they technically for this specific role?
-  For a software engineer: can they code well?
-  For a finance role: do they understand financial concepts?
-  10 = Expert level
-  5  = Knows the basics
-  1  = Significant gaps
+  For an engineer: coding ability.
+  For a finance role: financial knowledge.
+  For a PM: product and process knowledge.
 
   [ Communication Score ]
   How clearly do they express themselves?
   Can they explain things in a way the client will understand?
-  10 = Very clear, confident speaker
-  5  = Gets the point across but sometimes unclear
-  1  = Hard to understand, struggles to explain
 
   [ Confidence Score ]
-  How confident do they come across?
-  10 = Very confident, strong presence
-  5  = Somewhat confident, a bit hesitant at times
-  1  = Very nervous, lacks confidence
+  How confident do they come across in conversation?
+  Do they speak with authority or do they hesitate?
 
   [ Cultural Fit Score ]
   How well would they fit into the client's company culture?
-  10 = Perfect fit for the client's environment
-  5  = Probably okay, some concerns
-  1  = Likely a poor fit
+  Consider the client type you selected above.
 
 
 --------------------------------------------------------------------------------
 
-STEP 4 - WRITE THE QUALITATIVE FEEDBACK
+STEP 6 - WRITE THE QUALITATIVE FEEDBACK
 -----------------------------------------
-These are two text boxes where you write in your own words.
+These two text boxes are important. The program scans your text for specific
+words and phrases to detect issues that scores alone might miss.
 
   [ Recruiter Notes ]
-  Write your own observations about the candidate BEFORE the client interview.
-  What did you notice during your conversations with them?
-  
-  Examples of what to write:
-  - "Candidate seemed nervous during our prep call"
+  Write your own observations about the candidate.
+  Be specific and honest. Use the candidate's actual behaviour as examples.
+
+  Good examples:
+  - "Candidate seemed nervous during our prep call and second-guessed answers"
   - "Very strong technically but struggled to explain things simply"
-  - "Great attitude, very enthusiastic about the role"
-  - "Hadn't researched the client company at all"
-  - "Communication was unclear and rambling at times"
+  - "Hadn't researched the client company at all before the briefing"
+  - "Communication was rambling and hard to follow at times"
 
   [ Client Feedback ]
-  Write what the CLIENT said after the interview.
-  If the interview hasn't happened yet, leave this blank or write "N/A".
-  
-  Examples of what to write:
-  - "Client said the candidate struggled to articulate their experience"
-  - "Client felt the candidate was not confident enough for a senior role"
-  - "Client mentioned the candidate gave wrong answers on technical questions"
-  - "Client said they were unprepared and didn't know much about the company"
-  - "Client loved the candidate, very impressed"
+  Write what the client said after the interview.
+  If using Pre-Interview mode and the interview hasn't happened, leave blank.
 
-  TIP: The more detail you write, the better the analysis will be.
-  The program scans your text for specific words and phrases to detect issues.
+  Good examples:
+  - "Client said the candidate struggled to articulate their experience"
+  - "Client felt the candidate was hesitant and lacked confidence"
+  - "Client mentioned the candidate gave incorrect answers on technical topics"
+  - "Client said they were unprepared and unaware of the company's products"
+
+  TIP: Copy and paste directly from the client's email if you have one.
+  The more specific the language, the better the analysis.
 
 
 --------------------------------------------------------------------------------
 
-STEP 5 - CLICK ANALYSE
-------------------------
-Once you have filled everything in, click the button at the bottom:
+STEP 7 - SUBMIT
+----------------
+Click the button at the bottom right:
 
-  [ Analyse Candidate → ]
+  "Predict Risk"   — if you are in Pre-Interview mode
+  "Analyse Failure" — if you are in Post-Interview mode
 
-The button will show "Analysing..." for a second while it processes.
-Then the results will appear automatically.
-
-NOTE: The button will be greyed out if you haven't filled in the 
-Candidate Name or Role. Make sure those two fields are filled.
+The button is greyed out if Candidate Name or Role is empty.
+It will show "Analysing..." for a moment while the backend processes the data.
 
 
 ================================================================================
                            READING THE RESULTS
 ================================================================================
 
-After clicking Analyse, the form disappears and you see the results page.
-There are 5 sections:
+After submitting, the form is replaced by the results page.
+There are 4 sections:
 
 
-SECTION 1 - RISK BANNER (top of the page)
-------------------------------------------
-This is the most important part. It shows:
+SECTION 1 - RISK HEADER (top banner)
+--------------------------------------
+Shows the overall outcome at a glance.
 
-  RISK LEVEL:
-  ✅ LOW      = Strong candidate, good to go with minor preparation
-  ⚠️  MEDIUM   = Needs some coaching before the interview
-  🔶 HIGH     = Significant issues, needs serious preparation
-  🚨 CRITICAL = Do not submit without major work first
+  Mode label: tells you whether this was a Pre or Post interview analysis.
 
-  RISK SCORE:
-  A number out of 100. The higher the number, the better.
-  75-100 = LOW risk
-  55-74  = MEDIUM risk
-  35-54  = HIGH risk
-  0-34   = CRITICAL risk
+  Risk badge (top right of banner):
+    LOW RISK      = Strong candidate, good to go
+    MEDIUM RISK   = Needs some coaching before the interview
+    HIGH RISK     = Significant issues, needs serious preparation
+    CRITICAL RISK = Do not submit without major remediation first
 
-  The color of the banner matches the risk level:
-  Green = LOW, Yellow = MEDIUM, Orange = HIGH, Red = CRITICAL
+  Risk score (large number):
+  A number out of 100. Higher is better.
+    75 - 100 = LOW
+    55 - 74  = MEDIUM
+    35 - 54  = HIGH
+    0  - 34  = CRITICAL
 
-
-SECTION 2 - SUMMARY
----------------------
-One sentence that summarises the situation.
-
-Example:
-"Alex Johnson applying for Senior Software Engineer is a moderate-risk 
-candidate who needs targeted coaching (risk score: 61/100). 
-3 issues identified across their profile."
+  Summary sentence:
+  A plain-English description of the candidate's situation, including
+  the client type and number of issues found.
 
 
-SECTION 3 - SCORE BREAKDOWN
+SECTION 2 - SCORE BREAKDOWN
 -----------------------------
 A visual bar chart showing each score dimension.
 
-  - Each bar shows how strong that area is
-  - Green bars = strong, Yellow = moderate, Red = weak
-  - At the bottom you can see:
-    * Weighted total: the combined score before any penalty
-    * Rejection penalty: points deducted for previous client rejections
-    * Final score: the actual score used to determine risk level
+  Each bar is color-coded:
+    Green  = Strong (8+)
+    Yellow = Moderate (6-7.9)
+    Red    = Weak (below 6)
 
-  Why is there a penalty for rejections?
-  If a candidate has been rejected by clients before, it increases the risk.
-  Each rejection deducts 5 points (maximum 20 points deducted).
+  At the bottom:
+    Weighted total  = combined score before any penalty
+    Rejection penalty = points deducted for prior client rejections (if any)
+    Final score     = the actual score used to determine risk level
+
+  The weights used depend on the client type you selected:
+    Corporate:  Communication 30%, Confidence 25%, Technical 25%
+    Startup:    Technical 25%, Confidence 25%, Cultural Fit 20%
+    Consulting: Technical 30%, Communication 30%, Confidence 20%
 
 
-SECTION 4 - IDENTIFIED ISSUES
+SECTION 3 - IDENTIFIED ISSUES
 -------------------------------
 A list of specific problems detected in this candidate's profile.
 
-Examples:
-  ⚡ Below-average communication score
-  ⚡ Confidence issues detected in feedback text
-  ⚡ Candidate appeared underprepared for the client interview
-  ⚡ Candidate has 2 prior client rejections
+Issues come from two sources:
+  1. Low scores on the sliders (below threshold for the client type)
+  2. Negative keywords found in recruiter notes and client feedback
 
-These come from two sources:
-  1. Low scores on the sliders
-  2. Negative keywords found in your recruiter notes and client feedback
+Examples of issues you might see:
+  - Below-average communication score
+  - Confidence issues detected in feedback
+  - Candidate appeared underprepared for the client interview
+  - Cultural fit below startup threshold
+  - Candidate has 2 prior client rejections
 
 
-SECTION 5 - RECOMMENDATIONS
+SECTION 4 - RECOMMENDATIONS
 -----------------------------
-A numbered list of specific actions you should take.
+A numbered list of specific actions tailored to the issues found.
+Recommendations are also adjusted based on the client type.
 
 Examples:
-  1. Schedule mock client interviews focusing on structured storytelling 
-     (STAR method).
-  2. Implement a mandatory pre-interview briefing pack covering the client's 
-     business, recent news, and role expectations.
-  3. Conduct a structured debrief covering all previous rejections to identify 
-     a recurring pattern before any further submissions.
+  Corporate client with communication issue:
+  "For corporate clients, executive presence is critical — coach the candidate
+  on formal communication, structured answers, and boardroom-ready delivery."
 
-These are tailored to the specific issues found. Each issue gets at least 
-one recommendation.
+  Startup client with confidence issue:
+  "Startups want self-starters. Coach the candidate to demonstrate initiative
+  and comfort with ambiguity."
+
+  Preparation issue (any client type):
+  "Implement a mandatory pre-interview briefing pack covering the client's
+  business, recent news, and role expectations."
 
 
 --------------------------------------------------------------------------------
 
-STEP 6 - ANALYSE ANOTHER CANDIDATE
--------------------------------------
-At the bottom of the results page, click:
-
-  [ ← Analyse Another Candidate ]
-
-This clears everything and takes you back to the empty form.
+BACK TO FORM
+-------------
+At the bottom of the results page, click "Back to Form" to clear everything
+and analyse another candidate.
 
 
 ================================================================================
                               EXAMPLE WALKTHROUGH
 ================================================================================
 
-Let's say you have a candidate called Sarah Tan applying for a Project Manager 
-role. Here's how you'd fill it in:
+Scenario:
+Sarah Tan is applying for a Project Manager role at a large corporate bank.
+She has 5 years of experience. She had one previous client rejection.
+You are doing a pre-interview check before sending her.
 
+Fill in the form like this:
+
+  Interview Mode:          Pre-Interview
+  Client Type:             Corporate
   Candidate Name:          Sarah Tan
   Role Applied For:        Project Manager
   Years of Experience:     5
   Prior Client Rejections: 1
 
-  Internal Score:          7.0  (you think she's pretty good)
-  Technical Score:         7.5  (solid PM knowledge)
+  Internal Score:          7.0
+  Technical Score:         7.5
   Communication Score:     5.0  (she tends to ramble)
   Confidence Score:        5.5  (a bit hesitant)
-  Cultural Fit Score:      7.0  (should fit the client)
+  Cultural Fit Score:      7.0
 
   Recruiter Notes:
-  "Sarah is technically strong but during our prep call she was quite nervous 
-  and hesitant when answering questions. She also hadn't researched the client 
+  "Sarah is technically strong but during our prep call she was quite nervous
+  and hesitant when answering questions. She also hadn't researched the client
   company at all."
 
   Client Feedback:
-  "The client said Sarah struggled to articulate her experience clearly and 
-  seemed unsure of herself during the interview."
+  (leave blank — interview hasn't happened yet)
 
-After clicking Analyse, you would likely see:
+After clicking "Predict Risk", you would see:
 
-  Risk Level: HIGH
-  Issues: Low communication score, confidence issues, underprepared, 
-          prior rejection
-  Recommendations: Mock interviews, confidence coaching, briefing pack, 
-                   structured debrief on previous rejection
+  Risk Level:   HIGH
+  Risk Score:   ~52/100
+  Issues:       Low communication score, confidence issues, underprepared,
+                prior rejection penalty applied
+  Recommendations:
+    1. For corporate clients, executive presence is critical — coach on formal
+       communication and boardroom-ready delivery.
+    2. Corporate clients expect authority and decisiveness. Run mock interviews
+       with a senior stakeholder to build executive presence.
+    3. Implement a mandatory pre-interview briefing pack covering the client's
+       business, recent news, and role expectations.
+    4. Conduct a structured debrief on the previous rejection to identify
+       recurring patterns.
+
+Action: Do not submit Sarah yet. Run coaching sessions first, then re-assess.
 
 
 ================================================================================
-                                TIPS FOR BEST RESULTS
+                              TIPS FOR BEST RESULTS
 ================================================================================
 
-1. Be honest with your scores. If communication is weak, score it low.
-   The program can only help if the input is accurate.
+1. Be honest with your scores.
+   If communication is weak, score it low. The program can only help if the
+   input is accurate.
 
-2. Write detailed notes. The more you write in the text boxes, the more 
-   the program can detect. Short notes like "good candidate" won't trigger 
-   any specific insights.
+2. Write detailed notes.
+   Short notes like "good candidate" won't trigger any specific insights.
+   The more specific your language, the more the program can detect.
 
-3. Use the client's actual words in the Client Feedback box. 
+3. Use the client's actual words in the Client Feedback box.
    Copy-paste from an email if you have one.
 
-4. Always fill in Prior Client Rejections accurately. 
-   This has a direct impact on the risk score.
+4. Always set the correct Client Type.
+   A score of 6.5 on communication is fine for a startup but may be flagged
+   as a risk for a corporate client.
 
-5. Use this BEFORE the client interview too. 
-   You don't need client feedback to run an analysis. 
-   Use it as a pre-interview check to spot risks early.
+5. Use Pre-Interview mode proactively.
+   Don't wait for a rejection to use this tool. Run it before every submission
+   to catch risks early.
+
+6. Prior Client Rejections matters.
+   Even a strong candidate with 2+ rejections will have their score penalised.
+   Use the Post-Interview mode after each rejection to understand the pattern.
 
 
 ================================================================================
-                              QUICK REFERENCE CARD
+                              QUICK REFERENCE
 ================================================================================
 
-SCORES AT A GLANCE:
-  8-10 = Strong (green)
-  6-7  = Moderate (yellow)
-  0-5  = Weak (red)
+SCORE COLORS:
+  Green  = 8.0 and above (strong)
+  Yellow = 6.0 to 7.9   (moderate)
+  Red    = below 6.0    (weak)
 
 RISK LEVELS:
-  75-100 = LOW      ✅ Good to go
-  55-74  = MEDIUM   ⚠️  Needs coaching
-  35-54  = HIGH     🔶 Serious prep needed
-  0-34   = CRITICAL 🚨 Do not submit yet
+  LOW      = 75 to 100  (good to go)
+  MEDIUM   = 55 to 74   (needs coaching)
+  HIGH     = 35 to 54   (serious prep needed)
+  CRITICAL = 0 to 34    (do not submit yet)
 
-SCORE WEIGHTS (what matters most):
-  Technical      = 30%
-  Communication  = 25%
-  Confidence     = 20%
-  Cultural Fit   = 15%
-  Internal Score = 10%
+CLIENT TYPE WEIGHTS:
+  Corporate:  Communication 30%, Confidence 25%, Technical 25%, Cultural Fit 10%, Internal 10%
+  Startup:    Technical 25%, Confidence 25%, Communication 20%, Cultural Fit 20%, Internal 10%
+  Consulting: Technical 30%, Communication 30%, Confidence 20%, Cultural Fit 10%, Internal 10%
 
-KEYWORDS THE PROGRAM DETECTS:
-  Communication: "unclear", "rambling", "struggled to articulate", "verbose"
+REJECTION PENALTY:
+  1 rejection  = -5 points
+  2 rejections = -10 points
+  3 rejections = -15 points
+  4+ rejections = -20 points (maximum)
+
+KEYWORDS THE PROGRAM DETECTS IN TEXT:
+  Communication: "unclear", "rambling", "struggled to articulate", "hard to follow"
   Confidence:    "nervous", "hesitant", "unsure", "timid", "lacked confidence"
-  Technical:     "wrong answer", "gaps in knowledge", "couldn't solve"
+  Technical:     "wrong answer", "gaps in knowledge", "couldn't solve", "incorrect"
   Cultural Fit:  "not a fit", "arrogant", "unprofessional", "disengaged"
-  Preparation:   "unprepared", "didn't research", "unaware of", "not familiar"
+  Preparation:   "unprepared", "didn't research", "unaware of", "not familiar with"
