@@ -2,31 +2,26 @@
                         INTERVIEW INSIGHTS - PROGRAM OVERVIEW
 ================================================================================
 
-WHAT IS THIS PROGRAM?
----------------------
-Interview Insights is a full-stack web application that helps recruiters
-understand why candidates fail at the client interview stage and what to do
-about it.
-
-Recruiters input candidate data — scores, notes, and client feedback — and
-the system returns a risk level, a list of identified issues, and a set of
-actionable recommendations tailored to the specific client type.
-
-The goal is to bridge the gap between internal candidate evaluation and
-actual client expectations, giving recruiters a structured, data-informed
-view of candidate readiness before or after a client interview.
+EXECUTIVE SUMMARY
+-----------------
+This MVP addresses the low candidate-to-client conversion rate in recruitment
+by identifying gaps between internal evaluation and client expectations.
+It analyzes candidate scores and qualitative feedback, adjusts scoring weights
+based on client context (Corporate, Startup, Consulting), and delivers
+actionable coaching recommendations to improve interview success rates.
+In the future, this can be enhanced with NLP models trained on historical
+rejection data to improve prediction accuracy.
 
 
 THE BUSINESS PROBLEM
 ---------------------
-Recruitment agencies often face a recurring problem: candidates who pass
-internal screening still fail at the client interview stage. The reasons
-are usually the same — poor communication, lack of confidence, cultural
-mismatch, or being underprepared — but these issues are rarely caught early
-because internal evaluations are inconsistent and unstructured.
+Candidates who pass internal screening still fail at the client interview stage.
+The reasons are usually the same — poor communication, lack of confidence,
+cultural mismatch, or being underprepared — but these issues are rarely caught
+early because internal evaluations are inconsistent and unstructured.
 
-This tool addresses that gap by:
-  - Standardising how candidates are evaluated before submission
+This tool bridges that gap by:
+  - Standardising candidate evaluation before submission
   - Detecting risk signals in both scores and free-text feedback
   - Adjusting analysis based on what the specific client type values
   - Providing concrete coaching actions, not just a pass/fail verdict
@@ -36,355 +31,151 @@ This tool addresses that gap by:
                               SYSTEM ARCHITECTURE
 ================================================================================
 
-The application is split into two parts that communicate over HTTP:
-
   [Browser]
       |
-      | User opens the app, fills in the form, clicks submit
       v
-  [React Frontend]  — hosted on Vercel (free static hosting)
+  [React Frontend]  — Vercel (static hosting)
       |
-      | Sends candidate data as a JSON POST request
+      | POST /analyze  (JSON)
       v
-  [FastAPI Backend]  — hosted on Render (free Python hosting)
-      |
-      | Validates input, runs analysis logic, returns results as JSON
-      v
-  [Analyzer Module]  — pure Python, no external dependencies
-      |
-      | Calculates weighted score, detects issues, generates recommendations
-      v
-  [JSON Response back to browser]
+  [FastAPI Backend]  — Render (Python server)
       |
       v
-  [React displays results to the recruiter]
+  [Analyzer Module]  — weighted scoring + keyword detection
+      |
+      v
+  [JSON response back to browser → results displayed]
 
-In production:
-  Frontend: Vercel (serves static HTML/CSS/JS files)
-  Backend:  Render (runs Python FastAPI server)
-
-In local development:
-  Frontend: http://localhost:5173  (Vite dev server)
-  Backend:  http://localhost:8000  (Uvicorn)
+Local development:
+  Frontend: http://localhost:5173
+  Backend:  http://localhost:8000
 
 
 ================================================================================
                               TECHNOLOGY STACK
 ================================================================================
 
-FRONTEND
-  React 18         — UI component library
-  Vite             — build tool and local dev server
-  CSS Modules      — scoped component styling
-  Fetch API        — sends requests to the backend
-
-BACKEND
-  Python 3.10      — programming language
-  FastAPI          — web framework for building the REST API
-  Pydantic         — request validation and data modelling
-  Uvicorn          — ASGI server that runs the FastAPI app
-
-DEPLOYMENT
-  Vercel           — hosts the React frontend as a static site
-  Render           — hosts the FastAPI backend as a web service
-  GitHub           — source control, triggers auto-deploy on push
+  Frontend:   React 18, Vite, CSS Modules
+  Backend:    Python 3.10, FastAPI, Pydantic, Uvicorn
+  Deployment: Vercel (frontend), Render (backend), GitHub (CI/CD)
 
 
 ================================================================================
                               HOW THE ANALYSIS WORKS
 ================================================================================
 
-When a recruiter submits the form, the following happens:
+1. INPUT VALIDATION
+   FastAPI validates every field via Pydantic before processing begins.
 
-STEP 1 — INPUT VALIDATION
-  FastAPI receives the POST request and validates every field using Pydantic.
-  If any field is missing or out of range, it returns a 400 error immediately.
+2. WEIGHTED SCORE CALCULATION
+   Five dimensions are combined into a 0-100 score.
+   Weights adjust based on client type:
 
-STEP 2 — WEIGHTED SCORE CALCULATION
-  The five scores are combined into a single 0-100 score using weights.
-  The weights change depending on the client type selected:
+   Corporate:   Communication 30%, Confidence 25%, Technical 25%,
+                Cultural Fit 10%, Internal 10%
+   Startup:     Technical 25%, Confidence 25%, Communication 20%,
+                Cultural Fit 20%, Internal 10%
+   Consulting:  Technical 30%, Communication 30%, Confidence 20%,
+                Cultural Fit 10%, Internal 10%
 
-  Corporate weights:
-    Communication  30%  (executive presence is critical)
-    Confidence     25%
-    Technical      25%
-    Cultural Fit   10%
-    Internal       10%
+3. REJECTION PENALTY
+   Prior client rejections deduct points from the final score.
+   -5 per rejection, capped at -20.
 
-  Startup weights:
-    Technical      25%  (scrappiness and adaptability matter)
-    Confidence     25%
-    Communication  20%
-    Cultural Fit   20%
-    Internal       10%
+4. RISK LEVEL
+   75-100 = LOW | 55-74 = MEDIUM | 35-54 = HIGH | 0-34 = CRITICAL
 
-  Consulting weights:
-    Technical      30%  (structured thinking is non-negotiable)
-    Communication  30%
-    Confidence     20%
-    Cultural Fit   10%
-    Internal       10%
+5. SCORE-BASED ISSUE DETECTION
+   Each dimension is checked against a threshold.
+   Low scores trigger specific issues and recommendations.
+   Thresholds are stricter for client types that weight that dimension higher
+   (e.g. communication threshold is higher for Corporate clients).
 
-  Formula:
-  weighted_score = (tech * w1 + comm * w2 + conf * w3 + fit * w4 + internal * w5) * 10
+6. TEXT-BASED ISSUE DETECTION
+   Recruiter notes and client feedback are scanned for negative keywords.
+   Pre-Interview mode: scans recruiter notes only.
+   Post-Interview mode: scans both recruiter notes and client feedback.
 
-STEP 3 — REJECTION PENALTY
-  If the candidate has prior client rejections, points are deducted:
-    1 rejection  = -5 points
-    2 rejections = -10 points
-    3 rejections = -15 points
-    4+           = -20 points (capped)
+   Categories: communication, confidence, technical, cultural fit, preparation.
 
-  final_score = weighted_score - rejection_penalty
+7. CLIENT-AWARE RECOMMENDATIONS
+   Each issue generates a recommendation tailored to the client type.
+   A confidence issue at a Corporate client gets different advice than
+   the same issue at a Startup client.
 
-STEP 4 — RISK LEVEL ASSIGNMENT
-  The final score maps to a risk level:
-    75 to 100 = LOW
-    55 to 74  = MEDIUM
-    35 to 54  = HIGH
-    0 to 34   = CRITICAL
-
-STEP 5 — SCORE-BASED ISSUE DETECTION
-  Each score dimension is checked against a threshold.
-  If a score is below the threshold for the selected client type, an issue
-  is flagged and a recommendation is generated.
-
-  Examples:
-  - Communication below 6 (or below 7 for Corporate) → flag communication issue
-  - Confidence below 6 → flag confidence issue
-  - Technical below 6 → flag technical gap
-  - Cultural fit below 6 (or below 7 for Startup) → flag cultural fit concern
-  - Experience under 3 years AND technical below 7 → flag experience gap
-
-STEP 6 — TEXT-BASED ISSUE DETECTION
-  The recruiter notes and client feedback are scanned for negative signal
-  keywords. This catches issues that scores alone might miss.
-
-  In Pre-Interview mode: only recruiter notes are scanned.
-  In Post-Interview mode: both recruiter notes and client feedback are scanned.
-
-  Keyword categories:
-    Communication: "unclear", "rambling", "struggled to articulate",
-                   "hard to follow", "poor communication", "inarticulate"
-    Confidence:    "nervous", "hesitant", "unsure", "timid",
-                   "lacked confidence", "second-guessed", "apologetic"
-    Technical:     "wrong answer", "couldn't solve", "gaps in knowledge",
-                   "outdated skills", "incorrect", "failed technical"
-    Cultural Fit:  "not a fit", "arrogant", "unprofessional", "disengaged",
-                   "poor attitude", "rude", "dismissive"
-    Preparation:   "unprepared", "didn't research", "unaware of",
-                   "no knowledge of company", "not familiar with"
-
-STEP 7 — RECOMMENDATION GENERATION
-  For each issue detected, a recommendation is generated.
-  Recommendations are tailored to the client type.
-
-  Example — confidence issue at a Corporate client:
-  "Corporate clients expect authority and decisiveness. Run mock interviews
-  with a senior stakeholder to build executive presence."
-
-  Example — confidence issue at a Startup client:
-  "Startups want self-starters. Coach the candidate to demonstrate initiative
-  and comfort with ambiguity."
-
-  Example — preparation issue (any client):
-  "Implement a mandatory pre-interview briefing pack covering the client's
-  business, recent news, and role expectations."
-
-STEP 8 — SUMMARY GENERATION
-  A plain-English summary sentence is built from the mode, candidate name,
-  role, client type, risk level, score, and issue count.
-
-  Example:
-  "Pre-interview prediction: Sarah Tan applying for Project Manager at a
-  Corporate client is a high-risk submission requiring significant preparation
-  (risk score: 52/100). 4 issues identified."
-
-STEP 9 — RESPONSE
-  The backend returns a JSON object containing:
-    - risk_level
-    - risk_score
-    - identified_issues (list)
-    - recommendations (list)
-    - summary
-    - score_breakdown (all individual scores + weights used + penalty)
-    - mode_label
-
-  The React frontend receives this and renders the results page.
+8. SUMMARY + RESPONSE
+   A plain-English summary is built and returned alongside the full result.
+   The frontend renders risk level, score breakdown, issues, and recommendations.
 
 
 ================================================================================
-                              FRONTEND STRUCTURE
+                              FILE STRUCTURE
 ================================================================================
 
-The frontend is a single-page React application with no routing.
-It has two states: form view and results view.
+backend/
+  main.py        — FastAPI app, /health and /analyze endpoints, CORS config
+  analyzer.py    — all analysis logic (scoring, detection, recommendations)
+  requirements.txt
 
-App.jsx
-  Main component. Manages all state (form data, result, loading, error).
-  Switches between CandidateForm and InsightsPanel based on whether a
-  result exists.
-
-CandidateForm.jsx
-  The input form. Contains:
-  - Interview Mode toggle (Pre / Post)
-  - Client Type toggle (Corporate / Startup / Consulting)
-  - Candidate details (name, role, experience, rejections)
-  - Score sliders (5 dimensions)
-  - Qualitative feedback text areas
-  - Submit button
-
-ScoreSlider.jsx
-  Reusable slider component. Shows label, hint, current value (color-coded),
-  and a range input. Color changes green/yellow/red based on value.
-
-InsightsPanel.jsx
-  The results display. Contains:
-  - Risk header (mode label, risk badge, summary, score)
-  - Score breakdown (bar chart)
-  - Identified issues list
-  - Recommendations list
-  - Back to Form button
-
-ScoreBreakdown.jsx
-  Visual bar chart of all 5 score dimensions with weighted total,
-  rejection penalty, and final score shown in the footer.
-
-api.js
-  Single function: analyzeCandidate(payload).
-  Sends POST request to the backend and returns the JSON response.
-  Reads the backend URL from the VITE_API_URL environment variable.
-
-
-================================================================================
-                              BACKEND STRUCTURE
-================================================================================
-
-main.py
-  FastAPI application entry point.
-  Defines two endpoints:
-    GET  /health   — returns {"status": "ok"} for monitoring
-    POST /analyze  — receives candidate data, runs analysis, returns results
-  Configures CORS to allow the frontend to call the API.
-
-analyzer.py
-  All business logic lives here. No web framework dependencies.
-  Key functions:
-
-  analyze(candidate)
-    Main function. Orchestrates the full analysis pipeline.
-    Returns an InsightResult dataclass.
-
-  _compute_weighted_score(candidate)
-    Applies client-type weights to the 5 scores.
-    Returns a 0-100 float.
-
-  _get_risk_level(score)
-    Maps a numeric score to LOW / MEDIUM / HIGH / CRITICAL.
-
-  _detect_text_issues(text)
-    Scans a string for negative signal keywords.
-    Returns a dict of {category: [matched keywords]}.
-
-  _get_tip(client_type, category, fallback)
-    Returns a client-type specific recommendation string for a given issue
-    category, or falls back to a generic recommendation.
-
-  _build_summary(candidate, risk_level, score, issues, is_post)
-    Constructs the plain-English summary sentence.
-
-  Data classes:
-    CandidateInput  — all input fields including client_type and interview_mode
-    InsightResult   — all output fields returned to the frontend
+frontend/src/
+  App.jsx              — state management, form/results view switching
+  api.js               — POST request to backend
+  components/
+    CandidateForm.jsx  — mode toggle, client type, scores, feedback inputs
+    ScoreSlider.jsx    — reusable color-coded slider (green/yellow/red)
+    InsightsPanel.jsx  — results display (risk header, issues, recommendations)
+    ScoreBreakdown.jsx — bar chart of score dimensions
 
 
 ================================================================================
                               DEPLOYMENT
 ================================================================================
 
-BACKEND — Render
-  1. Push code to GitHub
-  2. Connect repo to Render
-  3. Set Root Directory to: interview-insights/backend
-  4. Build command: pip install -r requirements.txt
-  5. Start command: uvicorn main:app --host 0.0.0.0 --port $PORT
-  6. Render provides a public URL (e.g. https://interview-insights-api.onrender.com)
+Backend (Render):
+  Root Directory:  interview-insights/backend
+  Build command:   pip install -r requirements.txt
+  Start command:   uvicorn main:app --host 0.0.0.0 --port $PORT
 
-FRONTEND — Vercel
-  1. Connect repo to Vercel
-  2. Set Root Directory to: interview-insights/frontend
-  3. Add environment variable: VITE_API_URL = (your Render URL)
-  4. Vercel builds with Vite and serves the static output
-  5. Any push to the main branch triggers an automatic redeploy
-
-LOCAL DEVELOPMENT
-  Backend:
-    cd interview-insights/backend
-    python -m venv .venv
-    .venv\Scripts\activate        (Windows)
-    pip install -r requirements.txt
-    uvicorn main:app --reload
-    → runs at http://localhost:8000
-
-  Frontend:
-    cd interview-insights/frontend
-    npm install
-    (set VITE_API_URL=http://localhost:8000 in .env.local)
-    npm run dev
-    → runs at http://localhost:5173
+Frontend (Vercel):
+  Root Directory:  interview-insights/frontend
+  Env variable:    VITE_API_URL = (your Render URL)
+  Auto-deploys on every push to main branch.
 
 
 ================================================================================
                               DESIGN DECISIONS
 ================================================================================
 
-Why rule-based analysis instead of machine learning?
-  ML requires historical training data which we don't have. Rule-based logic
-  is transparent, explainable, and sufficient for an MVP. Recruiters can
-  understand exactly why a flag was raised. ML can be layered on later once
-  real rejection data is collected.
+Rule-based over ML
+  No historical training data exists yet. Rule-based logic is transparent,
+  explainable, and sufficient for an MVP. ML can be added once real rejection
+  data is collected.
 
-Why weighted scoring instead of a simple average?
-  Different dimensions matter differently depending on the client. A simple
-  average treats all factors equally, which doesn't reflect reality. Weighted
-  scoring lets us encode domain knowledge (e.g. communication matters more
-  for corporate clients) directly into the model.
+Weighted scoring over simple average
+  Different dimensions matter differently per client type. Weighted scoring
+  encodes that domain knowledge directly into the model.
 
-Why separate Pre and Post interview modes?
-  The tool serves two different use cases. Pre-interview is about prediction
-  and prevention. Post-interview is about diagnosis and learning. Mixing them
-  produces less useful output. Separating them also changes which text fields
-  are scanned, making the analysis more accurate for each context.
+Pre vs Post interview modes
+  Two different use cases: prediction before, diagnosis after. Separating them
+  produces more accurate and relevant output for each context.
 
-Why Client Type as a selector?
-  Different clients genuinely value different things. A startup founder and a
-  corporate HR director are looking for completely different profiles. Without
-  this context, the analysis would give the same recommendations regardless of
-  who the candidate is actually meeting. Client Type makes the output
-  meaningfully different and more actionable.
+Client Type selector
+  A startup founder and a corporate HR director look for completely different
+  profiles. Without this context, recommendations would be generic and less
+  actionable.
 
-Why Vercel and Render instead of AWS?
-  For an MVP demonstration, Vercel and Render are free, fast to set up, and
-  require no infrastructure configuration. The architecture is equivalent to
-  S3 + EC2 on AWS — static frontend + backend server — and can be migrated
-  to AWS at any point without changing the application code.
-
-Why FastAPI?
-  FastAPI provides automatic request validation via Pydantic, auto-generated
-  API documentation at /docs, and clean Python syntax. It is well-suited for
-  lightweight REST APIs and is production-ready without over-engineering.
+Vercel + Render over AWS
+  Equivalent architecture to S3 + EC2 — static frontend, backend server —
+  but free and faster to set up for an MVP. Can be migrated to AWS without
+  changing any application code.
 
 
 ================================================================================
                               SUMMARY
 ================================================================================
 
-Interview Insights translates a real recruiter pain point — candidates failing
-at the client stage — into a structured, data-driven tool. It combines
-quantitative scoring with qualitative text analysis, adjusts its logic based
-on client context, and delivers specific, actionable output rather than a
-generic pass/fail result.
-
-The system is intentionally simple: no database, no authentication, no ML
-model. It demonstrates the ability to identify a business problem, make
-reasonable technical decisions, and deliver a working end-to-end solution.
+Interview Insights connects a real business problem to a working technical
+solution. It is intentionally simple — no database, no authentication, no ML
+model — but demonstrates end-to-end thinking: from identifying the problem,
+to making deliberate technical decisions, to delivering a functional product
+that a recruiter can actually use.
