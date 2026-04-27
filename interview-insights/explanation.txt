@@ -1,0 +1,1027 @@
+================================================================================
+                        INTERVIEW INSIGHTS - SYSTEM OVERVIEW
+================================================================================
+
+PURPOSE
+-------
+This application helps recruiters identify why candidates fail at the client 
+interview stage and provides actionable recommendations to improve their 
+success rate. It analyzes both quantitative scores and qualitative feedback 
+to generate risk assessments and targeted coaching suggestions.
+
+
+ARCHITECTURE
+------------
+The system follows a simple client-server architecture:
+
+    [Browser] <--HTTP--> [React Frontend (S3)] <--REST API--> [FastAPI Backend (EC2)]
+                                                                      |
+                                                                [Analyzer Module]
+
+- Frontend: React SPA served as static files from AWS S3
+- Backend: Python FastAPI REST API running on AWS EC2
+- Communication: JSON over HTTP/HTTPS
+
+
+================================================================================
+                              BACKEND COMPONENTS
+================================================================================
+
+1. main.py - FastAPI Application Entry Point
+---------------------------------------------
+This is the web server that exposes the REST API.
+
+Key Functions:
+- app = FastAPI(): Creates the FastAPI application instance
+- add_middleware(CORSMiddleware): Enables cross-origin requests from the 
+  frontend (allows the S3-hosted React app to call the EC2 backend)
+- @app.get("/health"): Health check endpoint for monitoring
+- @app.post("/analyze"): Main endpoint that receives candidate data and 
+  returns analysis results
+
+Flow:
+1. Receives POST request at /analyze with candidate data (JSON)
+2. Validates the request using Pydantic's AnalyzeRequest model
+3. Converts the request into a CandidateInput dataclass
+4. Calls analyze() from analyzer.py
+5. Returns the InsightResult as JSON response
+
+
+2. analyzer.py - Core Business Logic
+-------------------------------------
+This module contains all the intelligence for analyzing candidates.
+
+Data Structures:
+- CandidateInput: Holds all input data about a candidate
+  * name, role, years_experience
+  * 5 scores (0-10 scale): internal, technical, communication, confidence, 
+    cultural_fit
+  * recruiter_notes: Free-text observations from the recruiter
+  * client_feedback: Free-text feedback from the client interview
+  * previous_client_rejections: Number of times rejected by other clients
+
+- InsightResult: The analysis output
+  * risk_level: LOW / MEDIUM / HIGH / CRITICAL
+  * risk_score: 0-100 numeric score
+  * identified_issues: List of problems detected
+  * recommendations: List of actionable suggestions
+  * summary: Human-readable summary sentence
+  * score_breakdown: Detailed scoring information
+
+Key Functions:
+
+a) analyze(candidate: CandidateInput) -> InsightResult
+   Main entry point. Orchestrates the entire analysis process.
+   
+   Steps:
+   1. Calculate weighted score from the 5 dimensions
+   2. Apply penalty for repeat rejections
+   3. Determine risk level based on final score
+   4. Detect score-based issues (low scores in any dimension)
+   5. Scan text for negative signal keywords
+   6. Generate specific recommendations for each issue
+   7. Build summary sentence
+   8. Return complete InsightResult
+
+b) _compute_weighted_score(candidate: CandidateInput) -> float
+   Calculates a weighted average of the 5 scores.
+   
+   Weights:
+   - Technical: 30% (most important for role competency)
+   - Communication: 25% (critical for client interaction)
+   - Confidence: 20% (affects client perception)
+   - Cultural Fit: 15% (important but harder to coach)
+   - Internal Score: 10% (baseline assessment)
+   
+   Formula: (tech*0.3 + comm*0.25 + conf*0.2 + culture*0.15 + internal*0.1) * 10
+   Output: 0-100 scale
+
+c) _get_risk_level(score: float) -> str
+   Maps numeric score to risk category.
+   
+   Thresholds:
+   - 75-100: LOW (strong candidate, minor tweaks)
+   - 55-75: MEDIUM (needs targeted coaching)
+   - 35-55: HIGH (significant preparation required)
+   - 0-35: CRITICAL (should not submit without major remediation)
+
+d) _detect_text_issues(text: str) -> dict[str, list[str]]
+   Scans free-text fields for negative signal keywords.
+   
+   Categories and Examples:
+   - communication: "unclear", "struggled to articulate", "rambling"
+   - confidence: "nervous", "hesitant", "unsure", "timid"
+   - technical: "wrong answer", "couldn't solve", "gaps in knowledge"
+   - cultural_fit: "not a fit", "arrogant", "unprofessional"
+   - preparation: "unprepared", "didn't research", "unaware of"
+   
+   Process:
+   1. Convert text to lowercase
+   2. Check if any keyword from each category appears in text
+   3. Return dictionary of {category: [matched_keywords]}
+   
+   This catches issues that scores alone might miss (e.g., a candidate might
+   have a decent communication score, but client feedback says "rambling").
+
+e) _build_summary(candidate, risk_level, score, issues) -> str
+   Generates a one-sentence executive summary.
+   
+   Format: "[Name] applying for [Role] is [risk description] (risk score: 
+   [score]/100). [N] issue(s) identified across their profile."
+
+
+Analysis Logic Flow:
+--------------------
+1. START with candidate data
+2. CALCULATE weighted score (0-100)
+3. APPLY rejection penalty (−5 per rejection, max −20)
+4. DETERMINE risk level from final score
+5. CHECK each score dimension:
+   - If communication < 6 → flag issue + recommend mock interviews
+   - If confidence < 6 → flag issue + recommend confidence coaching
+   - If technical < 6 → flag issue + recommend study materials
+   - If cultural_fit < 6 → flag issue + recommend client briefing
+   - If experience < 3 AND technical < 7 → flag experience gap
+6. SCAN text (recruiter_notes + client_feedback):
+   - Look for communication keywords → recommend presentation coaching
+   - Look for confidence keywords → recommend practice runs
+   - Look for preparation keywords → recommend briefing pack
+   - Look for technical keywords → recommend upskilling
+   - Look for cultural_fit keywords → recommend professionalism talk
+7. CHECK rejection history:
+   - If ≥2 rejections → recommend structured debrief
+8. GENERATE recommendations (each issue gets 1+ recommendations)
+9. BUILD summary sentence
+10. RETURN complete InsightResult
+
+
+================================================================================
+                             FRONTEND COMPONENTS
+================================================================================
+
+Technology Stack:
+- React 18 (UI library)
+- Vite (build tool and dev server)
+- CSS Modules (scoped styling)
+
+File Structure:
+frontend/
+├── src/
+│   ├── main.jsx              # React app entry point
+│   ├── index.css             # Global styles
+│   ├── api.js                # Backend API client
+│   ├── App.jsx               # Main application component
+│   ├── App.module.css        # App styles
+│   └── components/
+│       ├── CandidateForm.jsx          # Input form
+│       ├── CandidateForm.module.css
+│       ├── ScoreSlider.jsx            # Score input slider
+│       ├── ScoreSlider.module.css
+│       ├── InsightsPanel.jsx          # Results display
+│       ├── InsightsPanel.module.css
+│       ├── ScoreBreakdown.jsx         # Score visualization
+│       └── ScoreBreakdown.module.css
+├── index.html            # HTML entry point
+├── package.json          # Dependencies
+└── vite.config.js        # Build configuration
+
+
+Component Breakdown:
+--------------------
+
+1. main.jsx
+   - Entry point that mounts the React app to the DOM
+   - Renders <App /> inside React.StrictMode
+   - Imports global CSS
+
+2. api.js
+   - Contains API client function: analyzeCandidate(payload)
+   - Reads backend URL from environment variable VITE_API_URL
+   - Makes POST request to /analyze endpoint
+   - Handles errors and returns JSON response
+
+3. App.jsx - Main Application Logic
+   State Management:
+   - form: Current form data (all input fields)
+   - result: Analysis result from backend (null until submitted)
+   - loading: Boolean for submit button state
+   - error: Error message if API call fails
+   
+   Key Functions:
+   - handleChange(field, value): Updates a single form field
+   - handleSubmit(e): Submits form to backend API
+     1. Prevents default form submission
+     2. Sets loading state
+     3. Calls analyzeCandidate() API
+     4. Stores result or error
+     5. Clears loading state
+   - handleReset(): Clears form and result to start over
+   
+   Render Logic:
+   - If no result: Show CandidateForm
+   - If result exists: Show InsightsPanel
+
+4. CandidateForm.jsx
+   Displays input form with three sections:
+   
+   Section 1: Candidate Details
+   - Name (text input)
+   - Role (text input)
+   - Years of Experience (number input)
+   - Previous Client Rejections (number input)
+   
+   Section 2: Scores (0-10)
+   - Internal Score (slider)
+   - Technical Score (slider)
+   - Communication Score (slider)
+   - Confidence Score (slider)
+   - Cultural Fit Score (slider)
+   Each uses the ScoreSlider component
+   
+   Section 3: Qualitative Feedback
+   - Recruiter Notes (textarea)
+   - Client Feedback (textarea)
+   
+   Submit button is disabled if name or role is empty or if loading.
+
+5. ScoreSlider.jsx
+   Reusable slider component for score inputs.
+   
+   Features:
+   - Range input (0-10, step 0.5)
+   - Color-coded value display:
+     * Green (≥8): Strong
+     * Yellow (6-7.9): Moderate
+     * Red (<6): Weak
+   - Label with hint text
+   - Visual tick marks at 0, 5, 10
+   
+   Props:
+   - label: Display name
+   - hint: Helper text
+   - value: Current score
+   - onChange: Callback when value changes
+
+6. InsightsPanel.jsx
+   Displays analysis results in a structured layout.
+   
+   Sections:
+   1. Risk Card (top banner)
+      - Emoji indicator (✅ LOW, ⚠️ MEDIUM, 🔶 HIGH, 🚨 CRITICAL)
+      - Risk level text
+      - Risk score (large number)
+      - Color-coded background and border
+   
+   2. Summary Card
+      - One-sentence executive summary
+   
+   3. Score Breakdown Card
+      - Visual bars for each score dimension
+      - Weighted total calculation
+      - Rejection penalty (if any)
+      - Final score
+   
+   4. Identified Issues Card
+      - Bulleted list of problems detected
+      - Lightning bolt emoji for each issue
+   
+   5. Recommendations Card
+      - Numbered list of actionable suggestions
+      - Gradient-styled numbers
+   
+   6. Reset Button
+      - Returns to form to analyze another candidate
+
+7. ScoreBreakdown.jsx
+   Visualizes the score calculation process.
+   
+   Components:
+   - Bar component: Horizontal bar chart for each dimension
+     * Label (e.g., "Technical")
+     * Visual bar (width = score/10 * 100%)
+     * Numeric value
+     * Color-coded (green/yellow/red)
+   
+   Footer shows:
+   - Weighted total (before penalty)
+   - Rejection penalty (if any, shown in red)
+   - Final score (after penalty)
+
+
+User Flow:
+----------
+1. User lands on page → sees CandidateForm
+2. User fills in candidate details:
+   - Types name and role
+   - Adjusts score sliders (visual feedback with colors)
+   - Enters recruiter notes and client feedback
+   - Sets experience and rejection count
+3. User clicks "Analyse Candidate →"
+4. Button shows "Analysing…" (disabled)
+5. Frontend calls POST /analyze on backend
+6. Backend processes data and returns result
+7. Frontend receives result and switches to InsightsPanel
+8. User sees:
+   - Risk level banner (color-coded)
+   - Summary of the candidate
+   - Visual score breakdown
+   - List of specific issues
+   - Numbered recommendations
+9. User clicks "← Analyse Another Candidate"
+10. Form resets, cycle repeats
+
+
+================================================================================
+                            DATA FLOW DIAGRAM
+================================================================================
+
+[User Input]
+    |
+    v
+[CandidateForm Component]
+    | (form state)
+    v
+[App Component - handleSubmit()]
+    | (HTTP POST)
+    v
+[api.js - analyzeCandidate()]
+    | (JSON payload)
+    v
+[FastAPI - /analyze endpoint]
+    | (Pydantic validation)
+    v
+[analyzer.py - analyze()]
+    |
+    +---> [_compute_weighted_score()] → weighted score (0-100)
+    |
+    +---> Apply rejection penalty → adjusted score
+    |
+    +---> [_get_risk_level()] → risk level (LOW/MEDIUM/HIGH/CRITICAL)
+    |
+    +---> Check score thresholds → identify score-based issues
+    |
+    +---> [_detect_text_issues()] → scan for keyword signals
+    |
+    +---> Generate recommendations for each issue
+    |
+    +---> [_build_summary()] → create summary sentence
+    |
+    v
+[InsightResult object]
+    | (JSON response)
+    v
+[FastAPI - return JSON]
+    | (HTTP response)
+    v
+[api.js - return data]
+    | (result state)
+    v
+[App Component - setResult()]
+    | (props)
+    v
+[InsightsPanel Component]
+    |
+    +---> Risk card (visual indicator)
+    +---> Summary text
+    +---> [ScoreBreakdown] (bar charts)
+    +---> Issues list
+    +---> Recommendations list
+    |
+    v
+[User sees results]
+
+
+================================================================================
+                          DEPLOYMENT ARCHITECTURE
+================================================================================
+
+Production Setup:
+-----------------
+
+[User Browser]
+      |
+      | (1) HTTPS request for static files
+      v
+[AWS S3 Bucket - Static Website Hosting]
+  - Serves: index.html, JS bundles, CSS
+  - React app loads in browser
+      |
+      | (2) API calls (fetch)
+      v
+[AWS EC2 Instance]
+  - Runs: uvicorn (ASGI server)
+  - Hosts: FastAPI application
+  - Port: 8000 (open in security group)
+      |
+      | (3) Processes request
+      v
+[analyzer.py module]
+  - Executes analysis logic
+  - Returns results
+      |
+      | (4) JSON response
+      v
+[Browser receives and displays results]
+
+
+Deployment Scripts:
+-------------------
+
+1. infra/deploy-frontend.sh
+   Purpose: Build and deploy React app to S3
+   
+   Steps:
+   1. Install npm dependencies (npm ci)
+   2. Build production bundle with Vite (npm run build)
+      - Minifies JS/CSS
+      - Optimizes assets
+      - Injects VITE_API_URL into build
+   3. Sync dist/ folder to S3 bucket (aws s3 sync)
+   4. Configure bucket for static website hosting
+   5. Output the public URL
+   
+   Environment Variables:
+   - S3_BUCKET: Target S3 bucket name
+   - VITE_API_URL: Backend API URL (EC2 public IP)
+
+2. infra/deploy-backend.sh
+   Purpose: Set up and run FastAPI on EC2
+   
+   Steps:
+   1. Install Python 3 and pip (apt-get or yum)
+   2. Create Python virtual environment (.venv)
+   3. Activate virtual environment
+   4. Install dependencies from requirements.txt
+   5. Start uvicorn server in background (nohup)
+      - Binds to 0.0.0.0:8000 (accessible externally)
+      - Logs to uvicorn.log
+   6. Output PID and log location
+   
+   Requirements:
+   - EC2 instance with Python 3
+   - Security group allows inbound on port 8000
+   - Backend files copied to instance
+
+
+================================================================================
+                          KEY TECHNICAL DECISIONS
+================================================================================
+
+1. Why FastAPI?
+   - Fast, modern Python web framework
+   - Automatic API documentation (Swagger UI at /docs)
+   - Built-in request validation with Pydantic
+   - Async support (though not used here, allows future scaling)
+   - Easy CORS configuration
+
+2. Why React + Vite?
+   - React: Industry-standard UI library, component-based
+   - Vite: Fast dev server and build tool (faster than webpack)
+   - CSS Modules: Scoped styling prevents conflicts
+   - No complex state management needed (useState is sufficient)
+
+3. Why S3 + EC2 instead of serverless?
+   - Demonstrates understanding of basic AWS architecture
+   - S3 static hosting is cost-effective and scalable
+   - EC2 is simple to set up and debug
+   - Could migrate to Lambda + API Gateway later if needed
+
+4. Why rule-based analysis instead of ML?
+   - Faster to implement and debug
+   - Transparent and explainable (recruiters can understand the logic)
+   - No training data required
+   - Sufficient for MVP demonstration
+   - Can be enhanced with ML later (e.g., train on historical data)
+
+5. Why weighted scoring?
+   - Reflects real-world importance of different factors
+   - Technical skills matter most for role fit (30%)
+   - Communication is critical for client interaction (25%)
+   - Confidence affects perception (20%)
+   - Cultural fit is important but harder to coach (15%)
+   - Internal score provides baseline (10%)
+
+6. Why keyword scanning?
+   - Captures nuances that scores miss
+   - Real feedback often contains specific signals
+   - Simple string matching is fast and effective
+   - Can be enhanced with NLP later
+
+
+================================================================================
+                          POTENTIAL ENHANCEMENTS
+================================================================================
+
+Future improvements could include:
+- Machine learning model trained on historical rejection data
+- Integration with ATS (Applicant Tracking System)
+- Email notifications to recruiters
+- Historical tracking of candidate improvements
+- A/B testing of different coaching strategies
+- More sophisticated NLP for feedback analysis
+- Role-specific scoring weights
+- Client-specific cultural fit profiles
+- Automated scheduling of coaching sessions
+- Dashboard with aggregate metrics across all candidates
+
+
+================================================================================
+                              TESTING THE SYSTEM
+================================================================================
+
+Local Testing:
+1. Start backend: cd backend && uvicorn main:app --reload
+2. Test health: curl http://localhost:8000/health
+3. Test analyze: curl -X POST http://localhost:8000/analyze -H "Content-Type: application/json" -d '{"name":"Test","role":"Engineer","internal_score":7,"technical_score":6,"communication_score":5,"confidence_score":6,"cultural_fit_score":7,"recruiter_notes":"Seemed nervous","client_feedback":"Struggled to explain concepts","years_experience":2,"previous_client_rejections":1}'
+4. Start frontend: cd frontend && npm run dev
+5. Open browser to http://localhost:5173
+6. Fill form and submit
+
+Expected Result:
+- Risk level: MEDIUM or HIGH (due to low communication score)
+- Issues: Communication and confidence problems detected
+- Recommendations: Mock interviews, coaching sessions
+- Score breakdown shows weighted calculation
+
+
+================================================================================
+                                  SUMMARY
+================================================================================
+
+This is a practical, end-to-end demonstration of:
+✓ Full-stack development (React + Python)
+✓ REST API design and implementation
+✓ Business logic implementation (weighted scoring + rule-based analysis)
+✓ Cloud deployment (S3 + EC2)
+✓ User-centered design (clear UI, actionable insights)
+✓ Real-world problem solving (recruiter pain point)
+
+The system translates a business problem (candidate failures) into a technical
+solution (risk scoring + recommendations) and delivers it through a clean,
+functional interface. It's not over-engineered, but demonstrates solid
+fundamentals and the ability to ship a working MVP.
+
+
+================================================================================
+                        GLOSSARY OF TECHNICAL TERMS
+================================================================================
+
+AWS (Amazon Web Services)
+--------------------------
+A cloud computing platform provided by Amazon. Instead of buying and 
+maintaining your own physical servers, you rent computing resources from AWS 
+on-demand. You only pay for what you use.
+
+Think of it like renting an apartment instead of buying a house - you get 
+access to infrastructure without the upfront cost and maintenance burden.
+
+
+AWS S3 (Simple Storage Service)
+--------------------------------
+A cloud storage service for files and objects.
+
+What it does:
+- Stores files (HTML, CSS, JavaScript, images, videos, etc.)
+- Serves files over the internet via HTTP/HTTPS
+- Scales automatically (handles 1 user or 1 million users)
+- Highly durable (99.999999999% durability - your files won't get lost)
+
+Common uses:
+- Static website hosting (like our React app)
+- Backup and archival
+- Data lakes for analytics
+- Content delivery (images, videos)
+
+In our project:
+We use S3 to host the React frontend as a static website. The HTML, CSS, and 
+JavaScript files are uploaded to an S3 bucket, and S3 serves them to users' 
+browsers when they visit the site.
+
+Key concepts:
+- Bucket: A container for files (like a top-level folder)
+- Object: A file stored in a bucket
+- Static website hosting: S3 can serve HTML/CSS/JS files directly to browsers
+- Public access: We configure the bucket to allow anyone to read the files
+
+
+AWS EC2 (Elastic Compute Cloud)
+--------------------------------
+Virtual servers (computers) in the cloud.
+
+What it does:
+- Provides virtual machines (instances) that run in AWS data centers
+- You choose the operating system (Linux, Windows, etc.)
+- You choose the size (CPU, RAM, storage)
+- You can install any software you want
+- You pay by the hour for the compute time
+
+Think of it like renting a computer in a data center that's always on and 
+connected to the internet.
+
+Common uses:
+- Web servers (like our FastAPI backend)
+- Application servers
+- Database servers
+- Batch processing
+- Development and testing environments
+
+In our project:
+We use EC2 to run the FastAPI backend. We launch an EC2 instance (virtual 
+server), install Python and our dependencies, and run the uvicorn server to 
+handle API requests from the frontend.
+
+Key concepts:
+- Instance: A virtual server (one EC2 machine)
+- Instance type: Size/specs (e.g., t2.micro = 1 CPU, 1GB RAM)
+- AMI (Amazon Machine Image): Template for the operating system
+- Security group: Firewall rules (which ports are open)
+- Public IP: Internet address to access the instance
+
+
+FastAPI
+-------
+A modern Python web framework for building APIs.
+
+What it does:
+- Handles HTTP requests (GET, POST, etc.)
+- Routes requests to Python functions
+- Validates request data automatically
+- Generates API documentation automatically
+- Returns JSON responses
+
+Why we use it:
+- Fast to write and easy to understand
+- Built-in data validation with Pydantic
+- Automatic interactive docs at /docs (Swagger UI)
+- Good performance (async support)
+
+In our project:
+FastAPI receives POST requests at /analyze, validates the candidate data, 
+calls our analyzer module, and returns the results as JSON.
+
+
+REST API (Representational State Transfer)
+-------------------------------------------
+A style of building web APIs using HTTP.
+
+Key principles:
+- Uses standard HTTP methods (GET, POST, PUT, DELETE)
+- Resources are identified by URLs (e.g., /analyze)
+- Data is typically sent/received as JSON
+- Stateless (each request is independent)
+
+In our project:
+The frontend makes a POST request to /analyze with candidate data, and the 
+backend responds with analysis results. This is a REST API.
+
+
+JSON (JavaScript Object Notation)
+----------------------------------
+A text format for representing structured data.
+
+Example:
+{
+  "name": "Alex Johnson",
+  "role": "Engineer",
+  "technical_score": 7.5
+}
+
+Why we use it:
+- Human-readable
+- Easy to parse in any programming language
+- Standard format for web APIs
+- Lightweight (smaller than XML)
+
+In our project:
+The frontend sends candidate data to the backend as JSON, and the backend 
+returns analysis results as JSON.
+
+
+React
+-----
+A JavaScript library for building user interfaces.
+
+What it does:
+- Breaks UI into reusable components (like LEGO blocks)
+- Manages UI state (data that changes over time)
+- Efficiently updates the page when data changes
+- Component-based architecture
+
+In our project:
+We use React to build the frontend UI. Each part of the interface 
+(CandidateForm, InsightsPanel, ScoreSlider) is a separate component that can 
+be reused and tested independently.
+
+
+Vite
+----
+A build tool and development server for modern web projects.
+
+What it does:
+- Runs a local development server with hot reload (changes appear instantly)
+- Bundles JavaScript/CSS for production (minifies, optimizes)
+- Handles modern JavaScript features (ES modules, JSX)
+- Much faster than older tools like webpack
+
+In our project:
+Vite runs the dev server during development (npm run dev) and builds the 
+production bundle for S3 deployment (npm run build).
+
+
+CORS (Cross-Origin Resource Sharing)
+-------------------------------------
+A security mechanism that controls which websites can call your API.
+
+The problem:
+Browsers block requests from one domain (e.g., myapp.s3.amazonaws.com) to 
+another domain (e.g., ec2-instance.amazonaws.com) by default for security.
+
+The solution:
+The backend (FastAPI) sends special headers telling the browser "it's okay 
+for this frontend to call me."
+
+In our project:
+We configure CORS in main.py to allow the S3-hosted frontend to call the 
+EC2-hosted backend.
+
+
+Uvicorn
+-------
+An ASGI server that runs Python web applications.
+
+What it does:
+- Receives HTTP requests from the internet
+- Passes them to your FastAPI application
+- Returns the responses to clients
+- Handles multiple requests concurrently
+
+Think of it as the "engine" that runs your FastAPI app.
+
+In our project:
+We run: uvicorn main:app --host 0.0.0.0 --port 8000
+This starts the server, binds it to port 8000, and makes it accessible from 
+the internet.
+
+
+Virtual Environment (.venv)
+----------------------------
+An isolated Python environment for a project.
+
+What it does:
+- Keeps project dependencies separate from system Python
+- Prevents version conflicts between projects
+- Makes it easy to reproduce the environment elsewhere
+
+In our project:
+We create a virtual environment (python -m venv .venv), activate it, and 
+install dependencies (pip install -r requirements.txt) inside it.
+
+
+Pydantic
+--------
+A Python library for data validation.
+
+What it does:
+- Defines data schemas (what fields are required, their types)
+- Automatically validates incoming data
+- Converts data to the right types
+- Generates helpful error messages
+
+In our project:
+We use Pydantic's BaseModel to define AnalyzeRequest, which ensures that 
+incoming API requests have all required fields and correct data types.
+
+
+CSS Modules
+-----------
+A way to write CSS where class names are scoped to a specific component.
+
+The problem:
+In regular CSS, class names are global. If two components use .button, they 
+conflict.
+
+The solution:
+CSS Modules automatically rename classes to be unique (e.g., .button becomes 
+.CandidateForm_button_a3x9z).
+
+In our project:
+Each component has its own .module.css file. Styles in CandidateForm.module.css 
+only affect CandidateForm, not other components.
+
+
+Static Website
+--------------
+A website made of fixed files (HTML, CSS, JavaScript) that don't change on 
+the server.
+
+Characteristics:
+- No server-side code execution
+- Files are served as-is to the browser
+- Fast and cheap to host
+- Scales easily (can handle lots of traffic)
+
+Dynamic parts (like our analysis) happen in the browser (React) or via API 
+calls to a separate backend.
+
+In our project:
+The React app is a static website. The HTML/CSS/JS files are built once and 
+uploaded to S3. The "dynamic" part (analysis) happens by calling the EC2 
+backend API.
+
+
+API Endpoint
+------------
+A specific URL on a server that performs a function.
+
+Examples:
+- GET /health - Check if the server is running
+- POST /analyze - Analyze a candidate
+
+In our project:
+/analyze is an endpoint that receives candidate data and returns analysis 
+results.
+
+
+HTTP Methods
+------------
+Standard actions for web requests:
+
+- GET: Retrieve data (e.g., get a list of users)
+- POST: Create or submit data (e.g., submit a form)
+- PUT: Update existing data
+- DELETE: Remove data
+
+In our project:
+- GET /health: Check server status
+- POST /analyze: Submit candidate data for analysis
+
+
+Port
+----
+A number that identifies a specific service on a computer.
+
+Common ports:
+- 80: HTTP (web traffic)
+- 443: HTTPS (secure web traffic)
+- 8000: Common for development servers
+- 3000: Common for React dev servers
+- 5173: Vite dev server default
+
+In our project:
+- Backend runs on port 8000 (uvicorn)
+- Frontend dev server runs on port 5173 (Vite)
+
+When deploying, we need to open port 8000 in the EC2 security group so the 
+internet can reach our API.
+
+
+Security Group (AWS)
+--------------------
+A virtual firewall for EC2 instances.
+
+What it does:
+- Controls which ports are open
+- Controls which IP addresses can connect
+- Separate rules for inbound (incoming) and outbound (outgoing) traffic
+
+In our project:
+We configure the security group to allow:
+- Inbound on port 8000 (so the frontend can call the API)
+- Inbound on port 22 (so we can SSH into the instance)
+
+
+SSH (Secure Shell)
+------------------
+A protocol for securely connecting to remote computers.
+
+What it does:
+- Encrypted connection to a remote server
+- Run commands on the remote machine
+- Transfer files (SCP, SFTP)
+
+In our project:
+We use SSH to connect to the EC2 instance and run deployment commands:
+ssh -i mykey.pem ec2-user@<ec2-public-ip>
+
+
+Environment Variables
+---------------------
+Configuration values stored outside the code.
+
+Why use them:
+- Keep secrets (API keys, passwords) out of code
+- Different values for dev/staging/production
+- Easy to change without modifying code
+
+In our project:
+- VITE_API_URL: Backend URL (different for local dev vs production)
+- S3_BUCKET: Target bucket for deployment
+
+We use .env.local for local development and pass them as arguments during 
+deployment.
+
+
+Dataclass (Python)
+------------------
+A Python class that's primarily used to store data.
+
+What it does:
+- Automatically generates __init__, __repr__, etc.
+- Less boilerplate code
+- Type hints for better IDE support
+
+In our project:
+CandidateInput and InsightResult are dataclasses. They hold structured data 
+with named fields and types.
+
+
+Middleware
+----------
+Code that runs before/after request handling.
+
+What it does:
+- Intercepts requests before they reach your endpoints
+- Can modify requests or responses
+- Common uses: logging, authentication, CORS
+
+In our project:
+CORSMiddleware runs before every request to add CORS headers, allowing the 
+frontend to call the backend.
+
+
+Weighted Average
+----------------
+An average where some values count more than others.
+
+Formula:
+weighted_avg = (value1 × weight1) + (value2 × weight2) + ...
+
+In our project:
+We calculate a weighted score where technical (30%) matters more than internal 
+score (10%):
+score = (technical × 0.3) + (communication × 0.25) + (confidence × 0.2) + 
+        (cultural_fit × 0.15) + (internal × 0.1)
+
+
+Keyword Scanning / Pattern Matching
+------------------------------------
+Searching text for specific words or phrases.
+
+In our project:
+We scan recruiter notes and client feedback for negative signals like 
+"nervous", "unprepared", "struggled to articulate". If found, we flag 
+specific issues and generate targeted recommendations.
+
+This is a simple form of Natural Language Processing (NLP).
+
+
+MVP (Minimum Viable Product)
+-----------------------------
+The simplest version of a product that solves the core problem.
+
+Characteristics:
+- Has essential features only
+- Can be built quickly
+- Used to validate the idea
+- Can be enhanced later
+
+In our project:
+This is an MVP. It has the core functionality (analyze candidates, show 
+recommendations) but doesn't have advanced features like ML models, historical 
+tracking, or ATS integration. Those can be added later if the MVP proves 
+valuable.
+
+
+Deployment
+----------
+The process of making your application available to users.
+
+Steps:
+1. Build the application (compile, bundle, optimize)
+2. Upload files to servers (S3, EC2)
+3. Configure servers (install dependencies, set environment variables)
+4. Start services (uvicorn, nginx, etc.)
+5. Test that everything works
+
+In our project:
+- Frontend deployment: Build with Vite, upload to S3
+- Backend deployment: Copy files to EC2, install dependencies, start uvicorn
+
+
+================================================================================
+                    HOW THE PIECES FIT TOGETHER (SIMPLIFIED)
+================================================================================
+
+1. User opens browser → requests website from S3
+2. S3 sends HTML/CSS/JS files → browser loads React app
+3. User fills form → clicks "Analyze"
+4. React app sends candidate data to EC2 (POST /analyze)
+5. FastAPI on EC2 receives request → validates data
+6. FastAPI calls analyzer.py → runs analysis logic
+7. Analyzer calculates scores, detects issues, generates recommendations
+8. FastAPI sends results back as JSON
+9. React app receives results → displays InsightsPanel
+10. User sees risk level, issues, and recommendations
+
+All of this happens in seconds, and the user gets actionable insights to help 
+their candidate succeed.
