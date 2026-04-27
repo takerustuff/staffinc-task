@@ -55,11 +55,10 @@ export default function App() {
     <div className={styles.app}>
       <header className={styles.header}>
         <div className={styles.logo}>
-          <span className={styles.logoIcon}>🎯</span>
-          <span>Interview Insights</span>
+          Interview <span className={styles.logoAccent}>Insights</span>
         </div>
         <p className={styles.tagline}>
-          Understand why candidates fail at client stage — and how to fix it.
+          Candidate readiness analysis for client interviews
         </p>
       </header>
 

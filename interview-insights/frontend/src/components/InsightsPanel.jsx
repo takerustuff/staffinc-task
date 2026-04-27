@@ -3,10 +3,10 @@ import ScoreBreakdown from "./ScoreBreakdown";
 import styles from "./InsightsPanel.module.css";
 
 const RISK_CONFIG = {
-  LOW:      { color: "#38a169", bg: "#f0fff4", border: "#9ae6b4", emoji: "✅" },
-  MEDIUM:   { color: "#d69e2e", bg: "#fffff0", border: "#faf089", emoji: "⚠️" },
-  HIGH:     { color: "#dd6b20", bg: "#fffaf0", border: "#fbd38d", emoji: "🔶" },
-  CRITICAL: { color: "#c53030", bg: "#fff5f5", border: "#feb2b2", emoji: "🚨" },
+  LOW:      { color: "#276749", bg: "#f0fff4", border: "#9ae6b4", barColor: "#38a169" },
+  MEDIUM:   { color: "#744210", bg: "#fffbeb", border: "#fcd34d", barColor: "#d69e2e" },
+  HIGH:     { color: "#7b341e", bg: "#fff7ed", border: "#fdba74", barColor: "#dd6b20" },
+  CRITICAL: { color: "#742a2a", bg: "#fff5f5", border: "#feb2b2", barColor: "#c53030" },
 };
 
 export default function InsightsPanel({ result, candidate, onReset }) {
@@ -14,25 +14,22 @@ export default function InsightsPanel({ result, candidate, onReset }) {
 
   return (
     <div className={styles.panel}>
-      {/* Risk badge */}
+
+      {/* Risk header */}
       <div className={styles.riskCard} style={{ background: cfg.bg, borderColor: cfg.border }}>
-        <div className={styles.riskLeft}>
-          <span className={styles.riskEmoji}>{cfg.emoji}</span>
-          <div>
-            <p className={styles.riskLabel}>{result.mode_label}</p>
-            <p className={styles.riskLevel} style={{ color: cfg.color }}>{result.risk_level}</p>
+        <div className={styles.riskMeta}>
+          <span className={styles.modeLabel}>{result.mode_label}</span>
+          <span className={styles.riskBadge} style={{ color: cfg.color, borderColor: cfg.border }}>
+            {result.risk_level} RISK
+          </span>
+        </div>
+        <div className={styles.riskBody}>
+          <p className={styles.riskSummary}>{result.summary}</p>
+          <div className={styles.riskScore} style={{ color: cfg.color }}>
+            <span className={styles.scoreNum}>{result.risk_score}</span>
+            <span className={styles.scoreMax}>/100</span>
           </div>
         </div>
-        <div className={styles.riskScore}>
-          <span className={styles.scoreNum} style={{ color: cfg.color }}>{result.risk_score}</span>
-          <span className={styles.scoreMax}>/100</span>
-        </div>
-      </div>
-
-      {/* Summary */}
-      <div className={styles.card}>
-        <h3 className={styles.cardTitle}>Summary</h3>
-        <p className={styles.summary}>{result.summary}</p>
       </div>
 
       {/* Score breakdown */}
@@ -41,10 +38,10 @@ export default function InsightsPanel({ result, candidate, onReset }) {
       {/* Issues */}
       <div className={styles.card}>
         <h3 className={styles.cardTitle}>Identified Issues</h3>
-        <ul className={styles.list}>
+        <ul className={styles.issueList}>
           {result.identified_issues.map((issue, i) => (
             <li key={i} className={styles.issueItem}>
-              <span className={styles.bullet}>⚡</span>
+              <span className={styles.issueDot} />
               {issue}
             </li>
           ))}
@@ -64,9 +61,11 @@ export default function InsightsPanel({ result, candidate, onReset }) {
         </ol>
       </div>
 
-      <button className={styles.resetBtn} onClick={onReset}>
-        ← Analyse Another Candidate
-      </button>
+      <div className={styles.footer}>
+        <button className={styles.resetBtn} onClick={onReset}>
+          Back to Form
+        </button>
+      </div>
     </div>
   );
 }

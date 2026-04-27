@@ -3,92 +3,66 @@ import ScoreSlider from "./ScoreSlider";
 import styles from "./CandidateForm.module.css";
 
 const SCORES = [
-  { field: "internal_score", label: "Internal Score", hint: "Your agency's overall rating" },
-  { field: "technical_score", label: "Technical Score", hint: "Role-specific technical ability" },
+  { field: "internal_score",      label: "Internal Score",      hint: "Your agency's overall rating" },
+  { field: "technical_score",     label: "Technical Score",     hint: "Role-specific technical ability" },
   { field: "communication_score", label: "Communication Score", hint: "Clarity and articulation" },
-  { field: "confidence_score", label: "Confidence Score", hint: "Presence and self-assurance" },
-  { field: "cultural_fit_score", label: "Cultural Fit Score", hint: "Alignment with client culture" },
+  { field: "confidence_score",    label: "Confidence Score",    hint: "Presence and self-assurance" },
+  { field: "cultural_fit_score",  label: "Cultural Fit Score",  hint: "Alignment with client culture" },
 ];
 
 const CLIENT_TYPES = [
-  {
-    value: "corporate",
-    label: "Corporate",
-    desc: "Prioritises communication & executive presence",
-    icon: "🏢",
-  },
-  {
-    value: "startup",
-    label: "Startup",
-    desc: "Prioritises adaptability & scrappiness",
-    icon: "🚀",
-  },
-  {
-    value: "consulting",
-    label: "Consulting",
-    desc: "Prioritises structured thinking & polish",
-    icon: "📊",
-  },
+  { value: "corporate",   label: "Corporate",   desc: "Communication & executive presence" },
+  { value: "startup",     label: "Startup",     desc: "Adaptability & initiative" },
+  { value: "consulting",  label: "Consulting",  desc: "Structured thinking & polish" },
 ];
 
 const MODES = [
-  {
-    value: "pre",
-    label: "Pre-Interview",
-    desc: "Predict risk before the client interview",
-    icon: "🔮",
-  },
-  {
-    value: "post",
-    label: "Post-Interview",
-    desc: "Explain why the candidate failed",
-    icon: "🔍",
-  },
+  { value: "pre",  label: "Pre-Interview",  desc: "Predict risk before the interview" },
+  { value: "post", label: "Post-Interview", desc: "Analyse why the candidate failed" },
 ];
 
 export default function CandidateForm({ form, onChange, onSubmit, loading, error }) {
   return (
     <form className={styles.form} onSubmit={onSubmit} noValidate>
 
-      {/* Mode toggle */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Interview Mode</h2>
-        <p className={styles.sectionHint}>Are you analysing before or after the client interview?</p>
-        <div className={styles.toggleGroup}>
-          {MODES.map((m) => (
-            <button
-              key={m.value}
-              type="button"
-              className={`${styles.toggleBtn} ${form.interview_mode === m.value ? styles.toggleActive : ""}`}
-              onClick={() => onChange("interview_mode", m.value)}
-            >
-              <span className={styles.toggleIcon}>{m.icon}</span>
-              <span className={styles.toggleLabel}>{m.label}</span>
-              <span className={styles.toggleDesc}>{m.desc}</span>
-            </button>
-          ))}
-        </div>
-      </section>
+      {/* Mode + Client Type side by side */}
+      <div className={styles.topRow}>
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Interview Mode</h2>
+          <p className={styles.sectionHint}>Select the stage you are analysing.</p>
+          <div className={styles.toggleGroup}>
+            {MODES.map((m) => (
+              <button
+                key={m.value}
+                type="button"
+                className={`${styles.toggleBtn} ${form.interview_mode === m.value ? styles.toggleActive : ""}`}
+                onClick={() => onChange("interview_mode", m.value)}
+              >
+                <span className={styles.toggleLabel}>{m.label}</span>
+                <span className={styles.toggleDesc}>{m.desc}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
-      {/* Client type */}
-      <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Client Type</h2>
-        <p className={styles.sectionHint}>Different clients prioritise different traits — this adjusts the scoring weights.</p>
-        <div className={styles.toggleGroup}>
-          {CLIENT_TYPES.map((c) => (
-            <button
-              key={c.value}
-              type="button"
-              className={`${styles.toggleBtn} ${form.client_type === c.value ? styles.toggleActive : ""}`}
-              onClick={() => onChange("client_type", c.value)}
-            >
-              <span className={styles.toggleIcon}>{c.icon}</span>
-              <span className={styles.toggleLabel}>{c.label}</span>
-              <span className={styles.toggleDesc}>{c.desc}</span>
-            </button>
-          ))}
-        </div>
-      </section>
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Client Type</h2>
+          <p className={styles.sectionHint}>Adjusts scoring weights per client environment.</p>
+          <div className={styles.toggleGroup}>
+            {CLIENT_TYPES.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                className={`${styles.toggleBtn} ${form.client_type === c.value ? styles.toggleActive : ""}`}
+                onClick={() => onChange("client_type", c.value)}
+              >
+                <span className={styles.toggleLabel}>{c.label}</span>
+                <span className={styles.toggleDesc}>{c.desc}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      </div>
 
       {/* Candidate details */}
       <section className={styles.section}>
@@ -101,7 +75,7 @@ export default function CandidateForm({ form, onChange, onSubmit, loading, error
               type="text"
               value={form.name}
               onChange={(e) => onChange("name", e.target.value)}
-              placeholder="e.g. Alex Johnson"
+              placeholder="Full name"
               required
             />
           </div>
@@ -145,7 +119,7 @@ export default function CandidateForm({ form, onChange, onSubmit, loading, error
 
       {/* Scores */}
       <section className={styles.section}>
-        <h2 className={styles.sectionTitle}>Scores (0 – 10)</h2>
+        <h2 className={styles.sectionTitle}>Scores <span className={styles.scoreRange}>0 – 10</span></h2>
         <div className={styles.sliders}>
           {SCORES.map(({ field, label, hint }) => (
             <ScoreSlider
@@ -169,14 +143,14 @@ export default function CandidateForm({ form, onChange, onSubmit, loading, error
             rows={4}
             value={form.recruiter_notes}
             onChange={(e) => onChange("recruiter_notes", e.target.value)}
-            placeholder="Your observations about the candidate before the client interview..."
+            placeholder="Your observations about the candidate prior to the client interview..."
           />
         </div>
         <div className={styles.field}>
           <label htmlFor="client_feedback">
             Client Feedback
             {form.interview_mode === "pre" && (
-              <span className={styles.optionalTag}> — optional in Pre-Interview mode</span>
+              <span className={styles.optionalTag}> (optional)</span>
             )}
           </label>
           <textarea
@@ -187,17 +161,27 @@ export default function CandidateForm({ form, onChange, onSubmit, loading, error
             placeholder={
               form.interview_mode === "post"
                 ? "What the client said after the interview..."
-                : "Leave blank if interview hasn't happened yet..."
+                : "Leave blank if the interview has not taken place yet..."
             }
           />
         </div>
       </section>
 
-      {error && <p className={styles.error} role="alert">⚠ {error}</p>}
+      {error && <p className={styles.error} role="alert">{error}</p>}
 
-      <button type="submit" className={styles.submit} disabled={loading || !form.name || !form.role}>
-        {loading ? "Analysing…" : `${form.interview_mode === "post" ? "Analyse Failure →" : "Predict Risk →"}`}
-      </button>
+      <div className={styles.formFooter}>
+        <button
+          type="submit"
+          className={styles.submit}
+          disabled={loading || !form.name || !form.role}
+        >
+          {loading
+            ? "Analysing..."
+            : form.interview_mode === "post"
+            ? "Analyse Failure"
+            : "Predict Risk"}
+        </button>
+      </div>
     </form>
   );
 }
